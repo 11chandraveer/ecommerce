@@ -13,15 +13,27 @@ function CheckoutContent() {
   const [submitting, setSubmitting] = useState(false);
   const [complete, setComplete] = useState(false);
   const [error, setError] = useState('');
+  const [email, setEmail] = useState(user?.email ?? 'alex@example.com');
+
+  useEffect(() => {
+    if (user?.email) setEmail(user.email);
+  }, [user?.email]);
 
   useEffect(() => {
     const payment = searchParams.get('payment');
-    if (payment === 'success') {
-      clearCart();
-      setComplete(true);
+    const sessionId = searchParams.get('session_id');
+    if (payment === 'success' && sessionId) {
+      void fetch(`/api/checkout/session?session_id=${encodeURIComponent(sessionId)}`)
+        .then(async (response) => {
+          if (!response.ok) throw new Error('Payment could not be verified.');
+          clearCart();
+          setComplete(true);
+        })
+        .catch(() => setError('We could not verify the payment yet. Please contact support if you were charged.'));
+    } else if (payment === 'cancelled') {
+      setError('Payment was cancelled. Your cart is still saved.');
     }
-    if (payment === 'cancelled') setError('Payment was cancelled. Your cart is still saved.');
-  }, [searchParams]);
+  }, [searchParams, clearCart]);
 
   const items = cart.map((entry) => {
     const product = products.find((item) => item.id === entry.productId)!;
@@ -66,7 +78,7 @@ function CheckoutContent() {
             <h2 className="text-2xl font-black">Shipping details</h2>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <input defaultValue={user?.name ?? 'Alex Johnson'} className="rounded-full border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="Full name" />
-              <input defaultValue={user?.email ?? 'alex@example.com'} className="rounded-full border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="Email" />
+              <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" required className="rounded-full border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="Email" />
               <input className="md:col-span-2 rounded-full border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="Street address" />
               <input className="rounded-full border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="City" />
               <input className="rounded-full border border-slate-200 px-4 py-3 outline-none focus:border-brand-500" placeholder="ZIP code" />
@@ -115,7 +127,7 @@ function CheckoutContent() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  email: user?.email ?? 'alex@example.com',
+                  email,
                   couponCode,
                   items: cart.map((item) => ({ productId: item.productId, quantity: item.quantity })),
                 }),

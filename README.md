@@ -38,15 +38,15 @@ Open http://localhost:3000. If that port is busy, Next.js will choose the next a
 - `POST /api/checkout`
 - `GET /api/orders`
 
-To enable Stripe Checkout, copy `.env.example` to `.env.local` and add a Stripe test secret key:
+To enable Stripe Checkout, copy `.env.example` to `.env.local` and add Stripe test-mode keys:
 
 ```powershell
 Copy-Item .env.example .env.local
 ```
 
-Then set `STRIPE_SECRET_KEY=sk_test_...` in `.env.local` and restart the dev server. Without the key, checkout uses the local demo order fallback. Never commit `.env.local` or secret keys.
+Set `STRIPE_SECRET_KEY=sk_test_...`, `STRIPE_WEBHOOK_SECRET=whsec_...`, and the deployed `NEXT_PUBLIC_APP_URL`, then restart the dev server. Checkout now validates the cart server-side, creates a pending backend order, redirects to hosted Stripe Checkout, verifies the paid session on return, and accepts signed payment webhooks at `POST /api/stripe/webhook`. In local development, `stripe listen --forward-to localhost:3000/api/stripe/webhook` prints the webhook signing secret. Without `STRIPE_SECRET_KEY`, checkout uses the local demo order fallback. Never commit `.env.local` or secret keys.
 
-The API currently uses the catalog in `lib/data.ts` and a process-local order store in `lib/api-store.ts`. It is suitable for local demos and flow testing, but orders reset when the server restarts. Production deployment should replace this store with MongoDB, add signed session or JWT cookies, and connect checkout to Stripe using server-side secrets.
+The API currently uses the catalog in `lib/data.ts` and a process-local order store in `lib/api-store.ts`. It is suitable for local demos and flow testing, but orders reset when the server restarts. Production deployment should replace this store with MongoDB, add signed session or JWT cookies, and configure Stripe webhooks in the Stripe Dashboard.
 
 ## Verify
 
